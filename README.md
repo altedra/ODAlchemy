@@ -1,6 +1,6 @@
 # python-odata
 
-A simple library for read/write access to OData services.
+This is a Microsoft Graph specific simple library for read/write access to OData services.
 
 - Supports OData version 4.0
 - Requires JSON format support from the service
