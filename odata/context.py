@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import copy
 
 from odata.query import Query
 from odata.connection import ODataConnection
@@ -117,16 +118,23 @@ class Context:
         url = es.instance_url
         saved_data = None
         if len([i for i in patch_data if not i.startswith('@')]):
-            saved_data = self.connection.execute_patch(url, patch_data)
+            if 'members@odata.bind' in patch_data:
+                # Graph only allows modificationsets of 20 in some cases
+                chunk_patch = copy.deepcopy(patch_data)
+                for chunk in self.list_chunks(patch_data.get('members@odata.bind'), 20): 
+                    chunk_patch['members@odata.bind'] = chunk
+                    self.connection.execute_patch(url, chunk_patch)
+            else:
+                self.connection.execute_patch(url, patch_data)
 
         for nav_prop in del_data:
             for reference_id in del_data[nav_prop]:
                 del_url = '{}/{}/{}/$ref'.format(url, nav_prop, reference_id)
-                saved_data = self.connection.execute_delete(del_url)
+                self.connection.execute_delete(del_url)
         
         es.reset()
         
-        if saved_data is None and force_refresh:
+        if force_refresh:
             self.log.info(u'Reloading entity from service')
             saved_data = self.connection.execute_get(url)
 
@@ -134,3 +142,9 @@ class Context:
             entity.__odata__.update(saved_data)
 
         self.log.info(u'Success')
+
+    def list_chunks(self, lst, n):
+        """Yield successive n-sized chunks from lst.
+        Should be added in a lib not in context.py"""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
