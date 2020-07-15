@@ -90,13 +90,12 @@ class NavigationProperty(object):
         parent_url = es.instance_url
         parent_url += '/'
         url = urljoin(parent_url, self.name)
-        instances = []
-        while True:
+        raw_data = connection.execute_get(url)
+        instances = self.instances_from_data(raw_data, connection)
+        while '@odata.nextLink' in raw_data:
+            url = raw_data.get('@odata.nextLink')
             raw_data = connection.execute_get(url)
             instances.extend(self.instances_from_data(raw_data, connection))
-            if not '@odata.nextLink' in raw_data:
-                break
-            url = raw_data.get('@odata.nextLink')
         return instances
 
     def __set__(self, instance, value):
