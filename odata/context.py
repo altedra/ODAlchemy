@@ -2,6 +2,7 @@
 
 import logging
 import copy
+import sys
 
 from odata.query import Query
 from odata.connection import ODataConnection
@@ -107,7 +108,7 @@ class Context:
             msg = 'Cannot update Entity that does not belong to EntitySet: {0}'.format(entity)
             raise ODataError(msg)
 
-        patch_data, del_data = es.data_for_update()
+        patch_data, containment_data, del_data = es.data_for_update()
 
         # if len([i for i in patch_data if not i.startswith('@')]) == 0:
         #     self.log.debug(u'Nothing to update: {0}'.format(entity))
@@ -118,18 +119,21 @@ class Context:
         url = es.instance_url
         saved_data = None
         if len([i for i in patch_data if not i.startswith('@')]):
-            if 'members@odata.bind' in patch_data:
-                # Graph only allows modificationsets of 20 in some cases
-                chunk_patch = copy.deepcopy(patch_data)
-                for chunk in self.list_chunks(patch_data.get('members@odata.bind'), 20): 
-                    chunk_patch['members@odata.bind'] = chunk
+            for dataset_key in patch_data:
+                if dataset_key.startswith('@'): continue
+                dataset = copy.deepcopy(patch_data.get(dataset_key))
+                for chunk in self.list_chunks(dataset, 20): 
+                    chunk_patch = {dataset_key: chunk}
                     self.connection.execute_patch(url, chunk_patch)
-            else:
-                self.connection.execute_patch(url, patch_data)
+
+        for nav_prop in containment_data:
+            cont_url = '{}/{}/$ref'.format(url, nav_prop)
+            for reference_id in containment_data[nav_prop]:
+                self.connection.execute_post(cont_url, reference_id)
 
         for nav_prop in del_data:
             for reference_id in del_data[nav_prop]:
-                del_url = '{}/{}/{}/$ref'.format(url, nav_prop, reference_id)
+                del_url = '{}/{}/$ref?$id={}'.format(url, nav_prop, reference_id)
                 self.connection.execute_delete(del_url)
         
         es.reset()

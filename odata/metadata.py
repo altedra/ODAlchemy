@@ -67,6 +67,7 @@ class MetaData(object):
                 name = schema_nav['name']
                 type_ = schema_nav['type']
                 foreign_key = schema_nav['foreign_key']
+                containment = 'true' in schema_nav['containment']
 
                 is_collection, type_ = self._type_is_collection(type_)
 
@@ -79,6 +80,7 @@ class MetaData(object):
                             _search_entity,
                             collection=is_collection,
                             foreign_key=foreign_key,
+                            containment=containment
                         )
                         setattr(entity, name, nav)
 
@@ -378,6 +380,7 @@ class MetaData(object):
         for nav_property in xmlq(entity_element, 'edm:NavigationProperty'):
             p_name = nav_property.attrib['Name']
             p_type = nav_property.attrib['Type']
+            p_containment = nav_property.attrib.get('ContainsTarget', 'false')
             p_foreign_key = None
 
             ref_constraint = xmlq(nav_property, 'edm:ReferentialConstraint')
@@ -388,6 +391,7 @@ class MetaData(object):
             entity['navigation_properties'].append({
                 'name': p_name,
                 'type': p_type,
+                'containment': p_containment,
                 'foreign_key': p_foreign_key,
             })
         return entity

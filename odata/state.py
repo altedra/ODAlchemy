@@ -143,6 +143,7 @@ class EntityState(object):
     def data_for_update(self):
         update_data = OrderedDict()
         update_data['@odata.type'] = self.entity.__odata_type__
+        containment_data = OrderedDict()
         delete_data = OrderedDict()
         for _, prop in self.dirty_properties:
             if prop.is_computed_value:
@@ -161,18 +162,20 @@ class EntityState(object):
 
                         ids_to_add = new_set - old_set
                         entity_to_add = [ent for ent in value if ent.id in ids_to_add]
-                        if len(entity_to_add): 
-                            update_data[key] = ['{}/{}'.format(i.__odata_url__(), i.id) for i in entity_to_add]
 
+                        if len(entity_to_add):
+                            if prop.is_containment: 
+                                containment_data[prop.name] = [{'@odata.id':'{}/{}'.format(i.__odata_url__(), i.id)} for i in entity_to_add]
+                            else:
+                                update_data[key] = ['{}/{}'.format(i.__odata_url__(), i.id) for i in entity_to_add]
+                 
                         ids_to_delete = old_set - new_set
                         if len(ids_to_delete):
                             delete_data[prop.name] = list(ids_to_delete)
-
-                        #update_data[key] = [i.__odata__.id for i in value]
                     else:
                         update_data[key] = '{}/{}'.format(value.__odata_url__(), value.id)
-                        # update_data[key] = value.__odata__.id
-        return update_data, delete_data
+
+        return update_data, containment_data, delete_data
 
     def _clean_new_entity(self, entity):
         """:type entity: odata.entity.EntityBase """

@@ -116,7 +116,7 @@ class EntityBase(object):
                         es.nav_cache[prop.name] = dict(single=prop.instances_from_data(expanded_data))
 
             for prop_name, prop in es.properties:
-                i.__odata__[prop.name] = raw_data.get(prop.name)
+                i.__odata__[prop.name] = raw_data.get(prop.name).split('@')[0] if prop.name == 'id' else raw_data.get(prop.name)
 
             i.__odata__.persisted = True
         else:
