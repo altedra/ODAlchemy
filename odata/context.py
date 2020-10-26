@@ -133,7 +133,8 @@ class Context:
 
         for nav_prop in del_data:
             for reference_id in del_data[nav_prop]:
-                del_url = '{}/{}/$ref?$id={}'.format(url, nav_prop, reference_id)
+                #del_url = '{}/{}/$ref?$id={}'.format(url, nav_prop, reference_id) # M$ Chnaged API 10.10.2020
+                del_url = '{}/{}/{}/$ref'.format(url, nav_prop, reference_id)
                 self.connection.execute_delete(del_url)
         
         es.reset()
